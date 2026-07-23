@@ -1,0 +1,35 @@
+services:
+
+  docs-db:
+    image: postgres:15
+    container_name: docs-db
+
+    environment:
+      POSTGRES_DB: docsdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+
+    ports:
+      - "5432:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  docs-backend:
+    build: .
+    container_name: docs-backend
+
+    depends_on:
+      - docs-db
+
+    ports:
+      - "8081:8081"
+
+    environment:
+      JWT_SECRET: ThisIsMyVeryLongJwtSecretKeyForTesting123456789
+      DB_URL: jdbc:postgresql://docs-db:5432/docsdb
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+
+volumes:
+  postgres_data:
