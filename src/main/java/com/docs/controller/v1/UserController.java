@@ -51,11 +51,11 @@ public class UserController {
     // GET USER BY ID
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/{id}")
-    public ApiResponse<User> getUserById(@PathVariable Long id) {
+    public ApiResponse<UserResponseDTO> getUserById(@PathVariable Long id) {
 
-        User user = userService.getUserById(id);
+        UserResponseDTO user = userService.getUserById(id);
 
-        ApiResponse<User> response = new ApiResponse<>();
+        ApiResponse<UserResponseDTO> response = new ApiResponse<>();
         response.setSuccess(true);
         response.setMessage("User fetched successfully");
         response.setData(user);

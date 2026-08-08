@@ -12,9 +12,6 @@ import org.springframework.data.repository.query.Param;
 
 public interface DocumentRepository extends JpaRepository<Document, Long> {
 
-    // fetch all documents of a specific user
-    List<Document> findByUserId(Long userId);
-
     Page<Document> findByUserId(Long userId, Pageable pageable);
 
     Page<Document> findByUserIdAndTitleContainingIgnoreCase(
@@ -27,8 +24,8 @@ public interface DocumentRepository extends JpaRepository<Document, Long> {
     SELECT d FROM Document d
     WHERE d.user.id = :userId
     AND (
-        LOWER(d.title) LIKE LOWER(CONCAT(:search, '%'))
-        OR LOWER(d.content) LIKE LOWER(CONCAT(:search, '%'))
+        LOWER(d.title) LIKE LOWER(CONCAT('%', :search, '%'))
+        OR LOWER(d.content) LIKE LOWER(CONCAT('%', :search, '%'))
     )
 """)
     Page<Document> searchDocuments(

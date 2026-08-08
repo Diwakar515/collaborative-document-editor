@@ -30,19 +30,12 @@ public class DocumentController {
                 .getAuthentication()
                 .getName();
 
-        Document document = documentService.createDocumentByEmail(
-                email,
-                request.getTitle(),
-                request.getContent()
-        );
-
-        // Convert to DTO
-        DocumentResponseDTO dto = new DocumentResponseDTO();
-        dto.setId(document.getId());
-        dto.setTitle(document.getTitle());
-        dto.setContent(document.getContent());
-        dto.setCreatedAt(document.getCreatedAt());
-        dto.setOwnerEmail(document.getUser().getEmail());
+        DocumentResponseDTO dto =
+                documentService.createDocumentByEmail(
+                        email,
+                        request.getTitle(),
+                        request.getContent()
+                );
 
         ApiResponse<DocumentResponseDTO> response = new ApiResponse<>();
         response.setSuccess(true);

@@ -8,6 +8,7 @@
 ![JWT](https://img.shields.io/badge/JWT-Secured-black?style=for-the-badge&logo=jsonwebtokens)
 ![WebSocket](https://img.shields.io/badge/WebSocket-STOMP-success?style=for-the-badge)
 ![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)
+
 A production-inspired collaborative document editor built using **Spring Boot**, **React**, **PostgreSQL**, **WebSockets**, **JWT Authentication**, and **Docker**.
 
 The application enables multiple users to securely create, edit, share, and collaborate on documents in real time while following modern backend engineering practices such as layered architecture, REST APIs, authentication, exception handling, containerization, and environment-based configuration.
@@ -16,6 +17,7 @@ The application enables multiple users to securely create, edit, share, and coll
 ## 📑 Table of Contents
 
 - [Features](#-features)
+- [System Architecture](#-system-architecture)
 - [Tech Stack](#-tech-stack)
 - [Project Structure](#-project-structure)
 - [Getting Started](#-getting-started)
@@ -70,7 +72,12 @@ The application enables multiple users to securely create, edit, share, and coll
 - PostgreSQL Integration
 
 ---
+## 🏗️ System Architecture
 
+![System Architecture](images/system-architecture.png)
+
+The Collaborative Document Editor follows a layered architecture where the React frontend communicates with the Spring Boot backend using REST APIs for standard operations and WebSockets (STOMP) for real-time collaboration. The backend is secured using Spring Security and JWT authentication, while Spring Data JPA/Hibernate manages persistence with PostgreSQL. Docker Compose orchestrates the application services, providing a consistent local development environment.
+---
 ## 🛠 Tech Stack
 
 | Layer | Technology |

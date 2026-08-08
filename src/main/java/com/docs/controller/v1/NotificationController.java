@@ -20,8 +20,7 @@ public class NotificationController {
             NotificationService notificationService
     ) {
 
-        this.notificationService =
-                notificationService;
+        this.notificationService = notificationService;
     }
 
     @GetMapping

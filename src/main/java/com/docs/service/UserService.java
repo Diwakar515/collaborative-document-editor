@@ -81,15 +81,17 @@ public class UserService {
         }).toList();
     }
 
-    public User getUserById(Long id) {
+    public UserResponseDTO getUserById(Long id) {
 
         logger.info("Fetching user with ID: {}", id);
 
-        return userRepository.findById(id)
+        User user = userRepository.findById(id)
                 .orElseThrow(() -> {
                     logger.error("User not found with ID: {}", id);
                     return new ResourceNotFoundException("User not found");
                 });
+
+        return mapToUserResponseDTO(user);
     }
 
     public void deleteUser(Long id) {
@@ -215,6 +217,18 @@ public class UserService {
         dto.setCreatedAt(
                 user.getCreatedAt()
         );
+
+        return dto;
+    }
+
+    private UserResponseDTO mapToUserResponseDTO(User user) {
+
+        UserResponseDTO dto = new UserResponseDTO();
+
+        dto.setId(user.getId());
+        dto.setName(user.getName());
+        dto.setEmail(user.getEmail());
+        dto.setCreatedAt(user.getCreatedAt());
 
         return dto;
     }

@@ -6,6 +6,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.stereotype.Component;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.time.Duration;
 import java.util.Map;
@@ -14,6 +17,8 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 public class RateLimitingFilter implements Filter {
 
+    private static final Logger logger =
+            LoggerFactory.getLogger(RateLimitingFilter.class);
     private final Map<String, Bucket> cache = new ConcurrentHashMap<>();
 
     private Bucket createNewBucket() {
@@ -40,7 +45,7 @@ public class RateLimitingFilter implements Filter {
 
         String path = httpRequest.getRequestURI();
 
-        System.out.println(path);
+        logger.debug("Incoming request path: {}", path);
         // Skip rate limiting for public endpoints
         if (path.startsWith("/api/v1/users") ||
                 path.startsWith("/swagger-ui") ||

@@ -31,6 +31,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.transaction.annotation.Transactional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -88,8 +89,9 @@ public class DocumentService {
         activityLogRepository.save(log);
     }
 
+    @Transactional
     @CacheEvict(value = "documents", allEntries = true)
-    public Document createDocumentByEmail(String email, String title, String content) {
+    public DocumentResponseDTO  createDocumentByEmail(String email, String title, String content) {
 
         logger.info("Creating document for user: {}", email);
         logger.debug("Document title: {}", title);
@@ -97,7 +99,7 @@ public class DocumentService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> {
                     logger.error("User not found while creating document: {}", email);
-                    return new RuntimeException("User not found");
+                    return new ResourceNotFoundException("User not found");
                 });
 
         Document document = new Document();
@@ -115,7 +117,7 @@ public class DocumentService {
                 email
         );
 
-        return saved;
+        return mapToDocumentDTO(saved);
     }
 
     public List<ActivityLogResponseDTO> getActivityLogs(
@@ -126,7 +128,7 @@ public class DocumentService {
                 documentRepository.findById(
                         documentId
                 ).orElseThrow(() ->
-                        new RuntimeException(
+                        new ResourceNotFoundException(
                                 "Document not found"
                         ));
 
@@ -176,6 +178,7 @@ public class DocumentService {
                 }).toList();
     }
 
+    @Transactional
     @CacheEvict(
             value = "documents",
             allEntries = true
@@ -189,7 +192,7 @@ public class DocumentService {
 
         Document document = documentRepository.findById(documentId)
                         .orElseThrow(() ->
-                                new RuntimeException(
+                                new ResourceNotFoundException(
                                         "Document not found"
                                 ));
 
@@ -199,7 +202,7 @@ public class DocumentService {
                         .equals(ownerEmail)
         ) {
 
-            throw new RuntimeException(
+            throw new ForbiddenException(
                     "Only owner can share document"
             );
         }
@@ -220,7 +223,7 @@ public class DocumentService {
 
                         .orElseThrow(() ->
 
-                                new RuntimeException(
+                                new ResourceNotFoundException(
                                         "User does not exist"
                                 )
                         );
@@ -276,6 +279,7 @@ public class DocumentService {
         );
     }
 
+    @Transactional
     @CacheEvict(
             value = "documents",
             allEntries = true
@@ -296,7 +300,7 @@ public class DocumentService {
 
                         .orElseThrow(() ->
 
-                                new RuntimeException(
+                                new ResourceNotFoundException(
                                         "Document not found"
                                 )
                         );
@@ -309,7 +313,7 @@ public class DocumentService {
 
         ) {
 
-            throw new RuntimeException(
+            throw new ForbiddenException(
                     "Only owner can remove collaborators"
             );
         }
@@ -326,7 +330,7 @@ public class DocumentService {
 
                         .orElseThrow(() ->
 
-                                new RuntimeException(
+                                new ResourceNotFoundException(
                                         "Collaborator not found"
                                 )
                         );
@@ -360,6 +364,7 @@ public class DocumentService {
         );
     }
 
+    @Transactional
     @CacheEvict(
             value = "documents",
             allEntries = true
@@ -380,7 +385,7 @@ public class DocumentService {
                         documentId
                 ).orElseThrow(() ->
 
-                        new RuntimeException(
+                        new ResourceNotFoundException(
                                 "Document not found"
                         )
                 );
@@ -391,7 +396,7 @@ public class DocumentService {
                         .equals(ownerEmail)
         ) {
 
-            throw new RuntimeException(
+            throw new ForbiddenException(
                     "Only owner can update permissions"
             );
         }
@@ -407,7 +412,7 @@ public class DocumentService {
 
                         .orElseThrow(() ->
 
-                                new RuntimeException(
+                                new ResourceNotFoundException(
                                         "Collaborator not found"
                                 )
                         );
@@ -469,7 +474,7 @@ public class DocumentService {
                         documentId
                 ).orElseThrow(() ->
 
-                        new RuntimeException(
+                        new ResourceNotFoundException(
                                 "Document not found"
                         )
                 );
@@ -494,7 +499,7 @@ public class DocumentService {
                         !isCollaborator
         ) {
 
-            throw new RuntimeException(
+            throw new ForbiddenException(
                     "Access denied"
             );
         }
@@ -550,31 +555,6 @@ public class DocumentService {
                 .collect(Collectors.toList());
     }
 
-    public List<DocumentResponseDTO> getDocumentsByEmail(String email) {
-
-        logger.info("Fetching documents for user: {}", email);
-
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> {
-                    logger.error("User not found while fetching documents: {}", email);
-                    return new RuntimeException("User not found");
-                });
-
-        List<Document> documents = documentRepository.findByUserId(user.getId());
-
-        logger.info("Total documents fetched: {}", documents.size());
-
-        return documents.stream().map(doc -> {
-            DocumentResponseDTO dto = new DocumentResponseDTO();
-            dto.setId(doc.getId());
-            dto.setTitle(doc.getTitle());
-            dto.setContent(doc.getContent());
-            dto.setCreatedAt(doc.getCreatedAt());
-            dto.setOwnerEmail(doc.getUser().getEmail());
-            return dto;
-        }).toList();
-    }
-
     @Cacheable(
             value = "documents",
             key = "#email + '-' + #page + '-' + #size + '-' + #search"
@@ -595,7 +575,7 @@ public class DocumentService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> {
                     logger.error("User not found while fetching paginated documents: {}", email);
-                    return new RuntimeException("User not found");
+                    return new ResourceNotFoundException("User not found");
                 });
 
         Pageable pageable = PageRequest.of(
@@ -702,71 +682,35 @@ public class DocumentService {
                                         "Document not found"
                                 ));
 
-        boolean isOwner =
-                document.getUser()
-                        .getEmail()
-                        .equals(email);
+        Optional<DocumentCollaborator> collaborator =
+                getCollaborator(document, email);
 
-        Optional<DocumentCollaborator>
-                collaboratorOptional =
-                documentCollaboratorRepository
-                        .findByDocumentAndCollaboratorEmail(
-                                document,
-                                email
-                        );
+        if (!canRead(document, email)) {
 
-        if (
-                !isOwner &&
-                        collaboratorOptional.isEmpty()
-        ) {
+            logger.warn(
+                    "Unauthorized access attempt by user: {} on document ID: {}",
+                    email,
+                    documentId
+            );
 
             throw new ForbiddenException(
-                    "You do not have access to this document"
+                    "You do not have permission to access this document"
             );
         }
 
-        DocumentResponseDTO dto =
-                new DocumentResponseDTO();
+        DocumentResponseDTO dto = mapToDocumentDTO(document);
 
-        dto.setId(
-                document.getId()
-        );
-
-        dto.setTitle(
-                document.getTitle()
-        );
-
-        dto.setContent(
-                document.getContent()
-        );
-
-        dto.setCreatedAt(
-                document.getCreatedAt()
-        );
-
-        dto.setOwnerEmail(
-                document.getUser()
-                        .getEmail()
-        );
-
-        if (isOwner) {
-
-            dto.setPermissionType(
-                    PermissionType.OWNER
-            );
-
+        if (isOwner(document, email)) {
+            dto.setPermissionType(PermissionType.OWNER);
         } else {
-
             dto.setPermissionType(
-                    collaboratorOptional
-                            .get()
-                            .getPermissionType()
-            );
+                    collaborator.get().getPermissionType());
         }
 
         return dto;
     }
 
+    @Transactional
     @CacheEvict(value = "documents", allEntries = true)
     public DocumentResponseDTO updateDocument(
             Long documentId,
@@ -788,43 +732,12 @@ public class DocumentService {
                                     documentId
                             );
 
-                            return new RuntimeException(
+                            return new ResourceNotFoundException(
                                     "Document not found"
                             );
                         });
 
-        boolean isOwner = document.getUser()
-                        .getEmail()
-                        .equals(email);
-
-        Optional<DocumentCollaborator>
-                collaboratorOptional =
-                documentCollaboratorRepository
-                        .findByDocumentAndCollaboratorEmail(
-                                document,
-                                email
-                        );
-
-        boolean canEdit = false;
-
-        if (isOwner) {
-
-            canEdit = true;
-
-        } else if (
-                collaboratorOptional.isPresent()
-        ) {
-
-            DocumentCollaborator collaborator =
-                    collaboratorOptional.get();
-
-            canEdit =
-                    collaborator
-                            .getPermissionType()
-                            == PermissionType.EDITOR;
-        }
-
-        if (!canEdit) {
+        if (!canEdit(document, email)) {
 
             logger.warn(
                     "Unauthorized update attempt by user: {} on document ID: {}",
@@ -867,17 +780,10 @@ public class DocumentService {
                 email
         );
 
-        DocumentResponseDTO dto = new DocumentResponseDTO();
-
-        dto.setId(updated.getId());
-        dto.setTitle(updated.getTitle());
-        dto.setContent(updated.getContent());
-        dto.setCreatedAt(updated.getCreatedAt());
-        dto.setOwnerEmail(updated.getUser().getEmail());
-
-        return dto;
+        return mapToDocumentDTO(updated);
     }
 
+    @Transactional
     @CacheEvict(
             value = "documents",
             allEntries = true
@@ -902,46 +808,15 @@ public class DocumentService {
                             documentId
                     );
 
-                    return new RuntimeException(
+                    return new ResourceNotFoundException(
                             "Document not found"
                     );
                 });
 
-        boolean isOwner = document.getUser()
-                .getEmail()
-                .equals(email);
-
-        Optional<DocumentCollaborator>
-                collaboratorOptional =
-                documentCollaboratorRepository
-                        .findByDocumentAndCollaboratorEmail(
-                                document,
-                                email
-                        );
-
-        boolean canEdit = false;
-
-        if (isOwner) {
-
-            canEdit = true;
-
-        } else if (
-                collaboratorOptional.isPresent()
-        ) {
-
-            DocumentCollaborator collaborator =
-                    collaboratorOptional.get();
-
-            canEdit =
-                    collaborator
-                            .getPermissionType()
-                            == PermissionType.EDITOR;
-        }
-
-        if (!canEdit) {
+        if (!canEdit(document, email)) {
 
             logger.warn(
-                    "Unauthorized update attempt by user: {} on document ID: {}",
+                    "Unauthorized auto-save attempt by user: {} on document ID: {}",
                     email,
                     documentId
             );
@@ -971,17 +846,10 @@ public class DocumentService {
                 email
         );
 
-        DocumentResponseDTO dto = new DocumentResponseDTO();
-
-        dto.setId(updated.getId());
-        dto.setTitle(updated.getTitle());
-        dto.setContent(updated.getContent());
-        dto.setCreatedAt(updated.getCreatedAt());
-        dto.setOwnerEmail(updated.getUser().getEmail());
-
-        return dto;
+        return mapToDocumentDTO(updated);
     }
 
+    @Transactional
     @CacheEvict(value = "documents", allEntries = true)
     public void deleteDocument(Long documentId, String email) {
 
@@ -990,7 +858,7 @@ public class DocumentService {
         Document document = documentRepository.findById(documentId)
                 .orElseThrow(() -> {
                     logger.error("Document not found with ID: {}", documentId);
-                    return new RuntimeException("Document not found");
+                    return new ResourceNotFoundException("Document not found");
                 });
 
         if (!document.getUser().getEmail().equals(email)) {
@@ -1008,7 +876,7 @@ public class DocumentService {
                 documentRepository.findById(
                         documentId
                 ).orElseThrow(() ->
-                        new RuntimeException(
+                        new ResourceNotFoundException(
                                 "Document not found"
                         ));
 
@@ -1036,6 +904,7 @@ public class DocumentService {
                 }).toList();
     }
 
+    @Transactional
     public CommentResponseDTO addComment(
             Long documentId,
             String email,
@@ -1043,7 +912,7 @@ public class DocumentService {
     ) {
 
         Document document = documentRepository.findById(documentId).orElseThrow(() ->
-                        new RuntimeException(
+                        new ResourceNotFoundException(
                                 "Document not found"
                         ));
 
@@ -1233,26 +1102,24 @@ public class DocumentService {
                 documentRepository.findById(
                         documentId
                 ).orElseThrow(() ->
-                        new RuntimeException(
+                        new ResourceNotFoundException(
                                 "Document not found"
                         ));
 
-        boolean isOwner =
-                document.getUser()
-                        .getEmail()
-                        .equals(email);
+        Optional<DocumentCollaborator> collaborator =
+                getCollaborator(document, email);
 
-        boolean isCollaborator =
-                documentCollaboratorRepository
-                        .existsByDocumentAndCollaboratorEmail(
-                                document,
-                                email
-                        );
+        if (!isOwner(document, email)
+                && collaborator.isEmpty()) {
 
-        if (!isOwner && !isCollaborator) {
+            logger.warn(
+                    "Unauthorized comment access by user: {} on document ID: {}",
+                    email,
+                    documentId
+            );
 
             throw new ForbiddenException(
-                    "You do not have access to this document"
+                    "You do not have permission to access comments for this document"
             );
         }
 
@@ -1295,6 +1162,7 @@ public class DocumentService {
                 }).toList();
     }
 
+    @Transactional
     @CacheEvict(
             value = "documents",
             allEntries = true
@@ -1309,7 +1177,7 @@ public class DocumentService {
                 documentRepository.findById(
                         documentId
                 ).orElseThrow(() ->
-                        new RuntimeException(
+                        new ResourceNotFoundException(
                                 "Document not found"
                         ));
 
@@ -1317,7 +1185,7 @@ public class DocumentService {
                 commentRepository.findById(
                         commentId
                 ).orElseThrow(() ->
-                        new RuntimeException(
+                        new ResourceNotFoundException(
                                 "Comment not found"
                         ));
 
@@ -1332,38 +1200,13 @@ public class DocumentService {
             );
         }
 
-        boolean isOwner = document.getUser()
-                        .getEmail()
-                        .equals(email);
+        if (!canEdit(document, email)) {
 
-        Optional<DocumentCollaborator>
-                collaboratorOptional =
-                documentCollaboratorRepository
-                        .findByDocumentAndCollaboratorEmail(
-                                document,
-                                email
-                        );
-
-        boolean canResolve = false;
-
-        if (isOwner) {
-
-            canResolve = true;
-
-        } else if (
-                collaboratorOptional.isPresent()
-        ) {
-
-            PermissionType permission =
-                    collaboratorOptional
-                            .get()
-                            .getPermissionType();
-
-            canResolve =
-                    permission == PermissionType.EDITOR;
-        }
-
-        if (!canResolve) {
+            logger.warn(
+                    "Unauthorized comment resolution attempt by user: {} on document ID: {}",
+                    email,
+                    documentId
+            );
 
             throw new ForbiddenException(
                     "You do not have permission to resolve comments"
@@ -1464,6 +1307,76 @@ public class DocumentService {
 
         dto.setCreatedAt(
                 saved.getCreatedAt()
+        );
+
+        return dto;
+    }
+
+    private boolean isOwner(Document document, String email) {
+        return document.getUser().getEmail().equals(email);
+    }
+
+    private Optional<DocumentCollaborator> getCollaborator(
+            Document document,
+            String email) {
+
+        return documentCollaboratorRepository
+                .findByDocumentAndCollaboratorEmail(
+                        document,
+                        email
+                );
+    }
+
+    private boolean canEdit(
+            Document document,
+            String email) {
+
+        if (isOwner(document, email)) {
+            return true;
+        }
+
+        Optional<DocumentCollaborator> collaborator =
+                getCollaborator(document, email);
+
+        return collaborator.isPresent()
+                && collaborator.get().getPermissionType() == PermissionType.EDITOR;
+    }
+
+    private boolean canRead(
+            Document document,
+            String email) {
+
+        if (isOwner(document, email)) {
+            return true;
+        }
+
+        return getCollaborator(document, email).isPresent();
+    }
+
+    private DocumentResponseDTO mapToDocumentDTO(Document document) {
+
+        DocumentResponseDTO dto =
+                new DocumentResponseDTO();
+
+        dto.setId(
+                document.getId()
+        );
+
+        dto.setTitle(
+                document.getTitle()
+        );
+
+        dto.setContent(
+                document.getContent()
+        );
+
+        dto.setCreatedAt(
+                document.getCreatedAt()
+        );
+
+        dto.setOwnerEmail(
+                document.getUser()
+                        .getEmail()
         );
 
         return dto;

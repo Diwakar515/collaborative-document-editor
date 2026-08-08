@@ -4,7 +4,6 @@ import com.docs.dto.ApiResponse;
 import com.docs.exception.ForbiddenException;
 import com.docs.exception.InvalidCredentialsException;
 import com.docs.exception.ResourceNotFoundException;
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -18,8 +17,7 @@ public class GlobalExceptionHandler {
     // 400 - DB Constraint Errors
     @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
     public ResponseEntity<ApiResponse<Object>> handleDataIntegrityViolation(
-            org.springframework.dao.DataIntegrityViolationException ex,
-            HttpServletRequest request) {
+            org.springframework.dao.DataIntegrityViolationException ex) {
 
         String message = "Duplicate entry or invalid data";
 
@@ -38,8 +36,7 @@ public class GlobalExceptionHandler {
     // 403 - Spring Security Access Denied
     @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
     public ResponseEntity<ApiResponse<Object>> handleAccessDeniedException(
-            org.springframework.security.access.AccessDeniedException ex,
-            HttpServletRequest request) {
+            org.springframework.security.access.AccessDeniedException ex) {
 
         ApiResponse<Object> response = new ApiResponse<>();
         response.setSuccess(false);
@@ -52,8 +49,7 @@ public class GlobalExceptionHandler {
     // 403 - Custom Forbidden
     @ExceptionHandler(ForbiddenException.class)
     public ResponseEntity<ApiResponse<Object>> handleForbiddenException(
-            ForbiddenException ex,
-            HttpServletRequest request) {
+            ForbiddenException ex) {
 
         ApiResponse<Object> response = new ApiResponse<>();
         response.setSuccess(false);
@@ -66,8 +62,7 @@ public class GlobalExceptionHandler {
     // 400 - Validation Errors
     @ExceptionHandler(org.springframework.web.bind.MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Map<String, String>>> handleValidationExceptions(
-            org.springframework.web.bind.MethodArgumentNotValidException ex,
-            HttpServletRequest request) {
+            org.springframework.web.bind.MethodArgumentNotValidException ex) {
 
         Map<String, String> fieldErrors = new HashMap<>();
 
@@ -86,8 +81,7 @@ public class GlobalExceptionHandler {
     // 404 - Resource Not Found
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ApiResponse<Object>> handleResourceNotFoundException(
-            ResourceNotFoundException ex,
-            HttpServletRequest request) {
+            ResourceNotFoundException ex) {
 
         ApiResponse<Object> response = new ApiResponse<>();
         response.setSuccess(false);
@@ -100,8 +94,7 @@ public class GlobalExceptionHandler {
     // 401 - Invalid Credentials
     @ExceptionHandler(InvalidCredentialsException.class)
     public ResponseEntity<ApiResponse<Object>> handleInvalidCredentialsException(
-            InvalidCredentialsException ex,
-            HttpServletRequest request) {
+            InvalidCredentialsException ex) {
 
         ApiResponse<Object> response = new ApiResponse<>();
         response.setSuccess(false);
@@ -112,16 +105,15 @@ public class GlobalExceptionHandler {
     }
 
     // 400 - Generic Runtime (user errors like duplicate email)
-    @ExceptionHandler(RuntimeException.class)
-    public ResponseEntity<ApiResponse<Object>> handleRuntimeException(
-            RuntimeException ex,
-            HttpServletRequest request) {
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ApiResponse<Object>> handleException(
+            Exception ex) {
 
         ApiResponse<Object> response = new ApiResponse<>();
         response.setSuccess(false);
-        response.setMessage(ex.getMessage());
+        response.setMessage("An unexpected error occurred. Please try again later.");
         response.setData(null);
 
-        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }
