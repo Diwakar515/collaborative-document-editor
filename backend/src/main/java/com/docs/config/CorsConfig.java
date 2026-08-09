@@ -16,6 +16,7 @@ public class CorsConfig {
 
         // Allow frontend origin
         config.addAllowedOrigin("http://localhost:5173");
+        config.addAllowedOrigin("http://localhost:3000");
 
         // Allow all headers
         config.addAllowedHeader("*");

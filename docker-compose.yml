@@ -16,7 +16,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
 
   docs-backend:
-    build: .
+    build: ./backend
     container_name: docs-backend
 
     depends_on:
