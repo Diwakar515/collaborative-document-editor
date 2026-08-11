@@ -15,6 +15,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+
   docs-backend:
     build: ./backend
     container_name: docs-backend
@@ -29,8 +30,19 @@ services:
       DB_URL: jdbc:postgresql://docs-db:5432/docsdb
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
-
       JWT_SECRET: ${JWT_SECRET}
+
+
+  docs-frontend:
+    build: ./frontend
+    container_name: docs-frontend
+
+    depends_on:
+      - docs-backend
+
+    ports:
+      - "3000:80"
+
 
 volumes:
   postgres_data:
