@@ -15,13 +15,20 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d docsdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   docs-backend:
     build: ./backend
     container_name: docs-backend
 
     depends_on:
-      - docs-db
+      docs-db:
+        condition: service_healthy
 
     ports:
       - "8081:8081"
@@ -32,17 +39,23 @@ services:
       DB_PASSWORD: ${DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
 
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8081/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   docs-frontend:
     build: ./frontend
     container_name: docs-frontend
 
     depends_on:
-      - docs-backend
+      docs-backend:
+        condition: service_healthy
 
     ports:
       - "3000:80"
-
 
 volumes:
   postgres_data:

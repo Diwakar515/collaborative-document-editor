@@ -6,6 +6,7 @@ import com.docs.dto.UserRequestDTO;
 import com.docs.dto.UserResponseDTO;
 import com.docs.exception.InvalidCredentialsException;
 import com.docs.exception.ResourceNotFoundException;
+import com.docs.exception.DuplicateResourceException;
 import com.docs.security.JwtUtil;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -38,7 +39,7 @@ public class UserService {
     public UserResponseDTO saveUser(UserRequestDTO userDTO) {
 
         if (userRepository.findByEmail(userDTO.getEmail()).isPresent()) {
-            throw new RuntimeException("Email already registered");
+            throw new DuplicateResourceException("Email already registered");
         }
 
         logger.info("Creating new user with email: {}", userDTO.getEmail());

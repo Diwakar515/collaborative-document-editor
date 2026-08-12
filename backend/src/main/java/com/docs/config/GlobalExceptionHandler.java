@@ -4,6 +4,7 @@ import com.docs.dto.ApiResponse;
 import com.docs.exception.ForbiddenException;
 import com.docs.exception.InvalidCredentialsException;
 import com.docs.exception.ResourceNotFoundException;
+import com.docs.exception.DuplicateResourceException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -104,7 +105,20 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
     }
 
-    // 400 - Generic Runtime (user errors like duplicate email)
+    // 409 - Duplicate Resource
+    @ExceptionHandler(DuplicateResourceException.class)
+    public ResponseEntity<ApiResponse<Object>> handleDuplicateResourceException(
+            DuplicateResourceException ex) {
+
+        ApiResponse<Object> response = new ApiResponse<>();
+        response.setSuccess(false);
+        response.setMessage(ex.getMessage());
+        response.setData(null);
+
+        return new ResponseEntity<>(response, HttpStatus.CONFLICT);
+    }
+
+    // 400 - Generic Runtime
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Object>> handleException(
             Exception ex) {
