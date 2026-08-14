@@ -34,6 +34,7 @@ services:
       - "8081:8081"
 
     environment:
+      SPRING_PROFILES_ACTIVE: prod
       DB_URL: jdbc:postgresql://docs-db:5432/docsdb
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
